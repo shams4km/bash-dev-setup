@@ -1,5 +1,7 @@
 # setup_dev_env.sh
 
+> Репозиторий: [github.com/shams4km/bash-dev-setup](https://github.com/shams4km/bash-dev-setup)
+
 Bash-скрипт для автоматической настройки рабочего окружения разработчиков на Linux-сервере.
 
 ---
@@ -47,25 +49,77 @@ sudo bash setup_dev_env.sh
 
 ---
 
-## Пример вывода
+## Результат выполнения
 
+### 1. Запуск скрипта — лог в stdout
+
+```bash
+sudo bash setup_dev_env.sh -d /home/workdirs
 ```
-[2026-05-23 12:00:01] === setup_dev_env.sh started ===
-[2026-05-23 12:00:01] Base directory: /home/workdirs
-[2026-05-23 12:00:01] Group 'dev' created.
-[2026-05-23 12:00:01] User 'alice' added to group 'dev'.
-[2026-05-23 12:00:01] User 'bob' added to group 'dev'.
-[2026-05-23 12:00:01] Sudoers rule written: /etc/sudoers.d/dev_nopasswd
-[2026-05-23 12:00:01] Base directory '/home/workdirs' created.
-[2026-05-23 12:00:01] Directory '/home/workdirs/alice_workdir' created.
-[2026-05-23 12:00:01]   permissions: 660  owner: alice  group: alice
-[2026-05-23 12:00:01]   ACL: group 'dev' granted read+execute on '/home/workdirs/alice_workdir'.
-[2026-05-23 12:00:01] Directory '/home/workdirs/bob_workdir' created.
-[2026-05-23 12:00:01]   permissions: 660  owner: bob  group: bob
-[2026-05-23 12:00:01]   ACL: group 'dev' granted read+execute on '/home/workdirs/bob_workdir'.
-[2026-05-23 12:00:01] === setup_dev_env.sh finished successfully ===
-[2026-05-23 12:00:01] Log file: /var/log/setup_dev_env.log
+
+![Запуск скрипта](screenshots/01_run.png)
+
+Видно: создание группы `dev`, добавление пользователей, запись sudoers-файла, создание директорий с правами.
+
+---
+
+### 2. Пользователи в группе dev
+
+```bash
+getent group dev
 ```
+
+![Группа dev](screenshots/02_group.png)
+
+Все не системные пользователи добавлены в группу `dev`.
+
+---
+
+### 3. Sudoers-правило
+
+```bash
+sudo cat /etc/sudoers.d/dev_nopasswd
+```
+
+![Sudoers](screenshots/03_sudoers.png)
+
+Файл содержит: `%dev ALL=(ALL) NOPASSWD: ALL`
+
+---
+
+### 4. Права на директории
+
+```bash
+ls -la /home/workdirs/
+```
+
+![Директории](screenshots/04_dirs.png)
+
+Каждая директория имеет права `660`, владелец — пользователь, группа — основная группа пользователя.
+
+---
+
+### 5. ACL на директории
+
+```bash
+getfacl /home/workdirs/alice_workdir
+```
+
+![ACL](screenshots/05_acl.png)
+
+В ACL присутствует запись `group:dev:r-x` — группа `dev` имеет право чтения.
+
+---
+
+### 6. Лог-файл
+
+```bash
+cat /var/log/setup_dev_env.log
+```
+
+![Лог-файл](screenshots/06_log.png)
+
+Лог дублируется в файл параллельно с выводом в stdout.
 
 ---
 
@@ -90,6 +144,28 @@ cat /var/log/setup_dev_env.log
 
 ---
 
+## Пример вывода
+
+```
+[2026-05-23 12:00:01] === setup_dev_env.sh started ===
+[2026-05-23 12:00:01] Base directory: /home/workdirs
+[2026-05-23 12:00:01] Group 'dev' created.
+[2026-05-23 12:00:01] User 'alice' added to group 'dev'.
+[2026-05-23 12:00:01] User 'bob' added to group 'dev'.
+[2026-05-23 12:00:01] Sudoers rule written: /etc/sudoers.d/dev_nopasswd
+[2026-05-23 12:00:01] Base directory '/home/workdirs' created.
+[2026-05-23 12:00:01] Directory '/home/workdirs/alice_workdir' created.
+[2026-05-23 12:00:01]   permissions: 660  owner: alice  group: alice
+[2026-05-23 12:00:01]   ACL: group 'dev' granted read+execute on '/home/workdirs/alice_workdir'.
+[2026-05-23 12:00:01] Directory '/home/workdirs/bob_workdir' created.
+[2026-05-23 12:00:01]   permissions: 660  owner: bob  group: bob
+[2026-05-23 12:00:01]   ACL: group 'dev' granted read+execute on '/home/workdirs/bob_workdir'.
+[2026-05-23 12:00:01] === setup_dev_env.sh finished successfully ===
+[2026-05-23 12:00:01] Log file: /var/log/setup_dev_env.log
+```
+
+---
+
 ## Требования
 
 - Linux (тестировалось на Ubuntu 22.04 / Debian 12)
@@ -103,6 +179,13 @@ cat /var/log/setup_dev_env.log
 
 ```
 .
-├── setup_dev_env.sh   # основной скрипт
-└── README.md          # документация
+├── setup_dev_env.sh      # основной скрипт
+├── screenshots/          # скрины выполнения (добавить после запуска)
+│   ├── 01_run.png
+│   ├── 02_group.png
+│   ├── 03_sudoers.png
+│   ├── 04_dirs.png
+│   ├── 05_acl.png
+│   └── 06_log.png
+└── README.md             # документация
 ```
