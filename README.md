@@ -28,7 +28,7 @@ sudo bash setup_dev_env.sh -d /home/workdirs
 sudo bash setup_dev_env.sh
 ```
 
-> Скрипт требует прав **root**. Пакет `acl` должен быть установлен для работы с ACL (`apt install acl` / `yum install acl`).
+> Скрипт требует прав **root**. Пакет `acl` должен быть установлен (`apt install acl` / `yum install acl`).
 
 ---
 
@@ -51,15 +51,36 @@ sudo bash setup_dev_env.sh
 
 ## Результат выполнения
 
-### 1. Запуск скрипта — лог в stdout
+Тест запускался в контейнере Ubuntu 22.04 с тремя тестовыми пользователями: `alice`, `bob`, `carol`.
+
+### 1. Запуск скрипта
 
 ```bash
 sudo bash setup_dev_env.sh -d /home/workdirs
 ```
 
-![Запуск скрипта](screenshots/01_run.png)
-
-Видно: создание группы `dev`, добавление пользователей, запись sudoers-файла, создание директорий с правами.
+```
+[2026-05-23 13:19:58] === setup_dev_env.sh started ===
+[2026-05-23 13:19:58] Base directory: /home/workdirs
+[2026-05-23 13:19:58] Group 'dev' created.
+[2026-05-23 13:19:58] User 'alice' added to group 'dev'.
+[2026-05-23 13:19:58] User 'bob' added to group 'dev'.
+[2026-05-23 13:19:58] User 'carol' added to group 'dev'.
+/etc/sudoers.d/dev_nopasswd: parsed OK
+[2026-05-23 13:19:58] Sudoers rule written: /etc/sudoers.d/dev_nopasswd
+[2026-05-23 13:19:58] Base directory '/home/workdirs' created.
+[2026-05-23 13:19:58] Directory '/home/workdirs/alice_workdir' created.
+[2026-05-23 13:19:58]   permissions: 660  owner: alice  group: alice
+[2026-05-23 13:19:58]   ACL: group 'dev' granted read+execute on '/home/workdirs/alice_workdir'.
+[2026-05-23 13:19:58] Directory '/home/workdirs/bob_workdir' created.
+[2026-05-23 13:19:58]   permissions: 660  owner: bob  group: bob
+[2026-05-23 13:19:58]   ACL: group 'dev' granted read+execute on '/home/workdirs/bob_workdir'.
+[2026-05-23 13:19:58] Directory '/home/workdirs/carol_workdir' created.
+[2026-05-23 13:19:58]   permissions: 660  owner: carol  group: carol
+[2026-05-23 13:19:58]   ACL: group 'dev' granted read+execute on '/home/workdirs/carol_workdir'.
+[2026-05-23 13:19:58] === setup_dev_env.sh finished successfully ===
+[2026-05-23 13:19:58] Log file: /var/log/setup_dev_env.log
+```
 
 ---
 
@@ -69,21 +90,23 @@ sudo bash setup_dev_env.sh -d /home/workdirs
 getent group dev
 ```
 
-![Группа dev](screenshots/02_group.png)
+```
+dev:x:1003:alice,bob,carol
+```
 
-Все не системные пользователи добавлены в группу `dev`.
+Все три не системных пользователя добавлены в группу `dev`.
 
 ---
 
 ### 3. Sudoers-правило
 
 ```bash
-sudo cat /etc/sudoers.d/dev_nopasswd
+cat /etc/sudoers.d/dev_nopasswd
 ```
 
-![Sudoers](screenshots/03_sudoers.png)
-
-Файл содержит: `%dev ALL=(ALL) NOPASSWD: ALL`
+```
+%dev ALL=(ALL) NOPASSWD: ALL
+```
 
 ---
 
@@ -93,9 +116,16 @@ sudo cat /etc/sudoers.d/dev_nopasswd
 ls -la /home/workdirs/
 ```
 
-![Директории](screenshots/04_dirs.png)
+```
+total 20
+drwxr-xr-x  5 root  root  4096 May 23 13:19 .
+drwxr-xr-x  1 root  root  4096 May 23 13:19 ..
+drw-rwx---+ 2 alice alice 4096 May 23 13:19 alice_workdir
+drw-rwx---+ 2 bob   bob   4096 May 23 13:19 bob_workdir
+drw-rwx---+ 2 carol carol 4096 May 23 13:19 carol_workdir
+```
 
-Каждая директория имеет права `660`, владелец — пользователь, группа — основная группа пользователя.
+Права `660`, владелец и группа соответствуют пользователю. Знак `+` означает наличие ACL.
 
 ---
 
@@ -105,9 +135,18 @@ ls -la /home/workdirs/
 getfacl /home/workdirs/alice_workdir
 ```
 
-![ACL](screenshots/05_acl.png)
+```
+# file: home/workdirs/alice_workdir
+# owner: alice
+# group: alice
+user::rw-
+group::rw-
+group:dev:r-x
+mask::rwx
+other::---
+```
 
-В ACL присутствует запись `group:dev:r-x` — группа `dev` имеет право чтения.
+Группа `dev` имеет право чтения (`r-x`) через ACL.
 
 ---
 
@@ -117,9 +156,29 @@ getfacl /home/workdirs/alice_workdir
 cat /var/log/setup_dev_env.log
 ```
 
-![Лог-файл](screenshots/06_log.png)
+```
+[2026-05-23 13:19:58] === setup_dev_env.sh started ===
+[2026-05-23 13:19:58] Base directory: /home/workdirs
+[2026-05-23 13:19:58] Group 'dev' created.
+[2026-05-23 13:19:58] User 'alice' added to group 'dev'.
+[2026-05-23 13:19:58] User 'bob' added to group 'dev'.
+[2026-05-23 13:19:58] User 'carol' added to group 'dev'.
+[2026-05-23 13:19:58] Sudoers rule written: /etc/sudoers.d/dev_nopasswd
+[2026-05-23 13:19:58] Base directory '/home/workdirs' created.
+[2026-05-23 13:19:58] Directory '/home/workdirs/alice_workdir' created.
+[2026-05-23 13:19:58]   permissions: 660  owner: alice  group: alice
+[2026-05-23 13:19:58]   ACL: group 'dev' granted read+execute on '/home/workdirs/alice_workdir'.
+[2026-05-23 13:19:58] Directory '/home/workdirs/bob_workdir' created.
+[2026-05-23 13:19:58]   permissions: 660  owner: bob  group: bob
+[2026-05-23 13:19:58]   ACL: group 'dev' granted read+execute on '/home/workdirs/bob_workdir'.
+[2026-05-23 13:19:58] Directory '/home/workdirs/carol_workdir' created.
+[2026-05-23 13:19:58]   permissions: 660  owner: carol  group: carol
+[2026-05-23 13:19:58]   ACL: group 'dev' granted read+execute on '/home/workdirs/carol_workdir'.
+[2026-05-23 13:19:58] === setup_dev_env.sh finished successfully ===
+[2026-05-23 13:19:58] Log file: /var/log/setup_dev_env.log
+```
 
-Лог дублируется в файл параллельно с выводом в stdout.
+Лог полностью дублируется в файл параллельно с выводом в stdout.
 
 ---
 
@@ -144,31 +203,9 @@ cat /var/log/setup_dev_env.log
 
 ---
 
-## Пример вывода
-
-```
-[2026-05-23 12:00:01] === setup_dev_env.sh started ===
-[2026-05-23 12:00:01] Base directory: /home/workdirs
-[2026-05-23 12:00:01] Group 'dev' created.
-[2026-05-23 12:00:01] User 'alice' added to group 'dev'.
-[2026-05-23 12:00:01] User 'bob' added to group 'dev'.
-[2026-05-23 12:00:01] Sudoers rule written: /etc/sudoers.d/dev_nopasswd
-[2026-05-23 12:00:01] Base directory '/home/workdirs' created.
-[2026-05-23 12:00:01] Directory '/home/workdirs/alice_workdir' created.
-[2026-05-23 12:00:01]   permissions: 660  owner: alice  group: alice
-[2026-05-23 12:00:01]   ACL: group 'dev' granted read+execute on '/home/workdirs/alice_workdir'.
-[2026-05-23 12:00:01] Directory '/home/workdirs/bob_workdir' created.
-[2026-05-23 12:00:01]   permissions: 660  owner: bob  group: bob
-[2026-05-23 12:00:01]   ACL: group 'dev' granted read+execute on '/home/workdirs/bob_workdir'.
-[2026-05-23 12:00:01] === setup_dev_env.sh finished successfully ===
-[2026-05-23 12:00:01] Log file: /var/log/setup_dev_env.log
-```
-
----
-
 ## Требования
 
-- Linux (тестировалось на Ubuntu 22.04 / Debian 12)
+- Linux (тестировалось на Ubuntu 22.04)
 - Bash ≥ 4.0
 - Пакет `acl` (`apt install acl`)
 - Права root / sudo
@@ -179,13 +216,6 @@ cat /var/log/setup_dev_env.log
 
 ```
 .
-├── setup_dev_env.sh      # основной скрипт
-├── screenshots/          # скрины выполнения (добавить после запуска)
-│   ├── 01_run.png
-│   ├── 02_group.png
-│   ├── 03_sudoers.png
-│   ├── 04_dirs.png
-│   ├── 05_acl.png
-│   └── 06_log.png
-└── README.md             # документация
+├── setup_dev_env.sh   # основной скрипт
+└── README.md          # документация
 ```
